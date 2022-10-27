@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+import os
+import github  # Install pygithub
+import git     # Install gitpython
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+import subprocess
+import sys
+
+year = 2020
+
+parser = ArgumentParser(description="""Helper script to mark computational linear algebra assignments.""")
+parser.add_argument("--update", action="store_true", help="Update all student repositories.")
+parser.add_argument("--checkout", type=str, action="store", metavar=("REPO"),
+                        help="checkout Imperial-MATH96063/clacourse-%d-REPO." % year)
+args = parser.parse_args()
+
+repo = git.Repo(".")
+
+if args.update:
+    g = github.Github(os.environ["GITHUB_OAUTH"])
+    org = g.get_organization("Imperial-MATH96063")
+
+    for r in org.get_repos():
+        if r.name.startswith("clacourse-%d" % year):
+            print(r.name)
+            uname = r.name[15:]
+            print("Looking for remote %s" % uname)
+            try:
+                remote = repo.remote(uname)
+                print("Found")
+            except ValueError:
+                print("Not found. Creating")
+                remote = repo.create_remote(uname, r.ssh_url)
+            print("Fetching")
+            remote.fetch()
+        if r.name.startswith("cla-%d" % year):
+            print(r.name)
+            uname = r.name[9:]
+            print("Looking for remote %s" % uname)
+            try:
+                remote = repo.remote(uname)
+                print("Found")
+            except ValueError:
+                print("Not found. Creating")
+                remote = repo.create_remote(uname, r.ssh_url)
+            print("Fetching")
+            remote.fetch()
+
+if args.checkout:
+    user = args.checkout
+    print("Checking out head for %s" % user)
+    head = repo.create_head(user, commit = "/%s/implementation" % user)
+    repo.head.reference = head
+    repo.head.reset(working_tree=True)
+    print("success")
